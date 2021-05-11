@@ -1,0 +1,67 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-postgres-config
+  labels:
+    app: {{ .Release.Name }}
+data:
+  POSTGRES_DB: {{ .Values.DB_HOST }}
+  POSTGRES_USER: {{ .Values.DB_USER }}
+  POSTGRES_PASSWORD: {{ .Values.DB_PASSWORD }}
+  POSTGRES_PORT: {{ .Values.DB_PORT }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+  labels:
+    app: {{ .Release.Name }}
+data:
+  # Required Secrets
+  DJANGO_SECRET: {{ .Values.DJANGO_SECRET }}
+  DB_HOST: {{ .Values.DB_HOST }}
+  DB_PORT: {{ .Values.DB_PORT }}
+  DB_USER: {{ .Values.DB_USER }}
+  DB_PASSWORD: {{ .Values.DB_PASSWORD }}
+  OLD_JOBS_RETENTION_DAYS: {{ .Values.OLD_JOBS_RETENTION_DAYS }}
+  PYINTELOWL_TOKEN_LIFETIME: {{ .Values.PYINTELOWL_TOKEN_LIFETIME }}
+  SHODAN_KEY: {{ .Values.SHODAN_KEY }}
+  ABUSEIPDB_KEY: {{ .Values.ABUSEIPDB_KEY }}
+  AUTH0_KEY: {{ .Values.AUTH0_KEY }}
+  SECURITYTRAILS_KEY: {{ .Values.SECURITYTRAILS_KEY }}
+  GSF_KEY: {{ .Values.GSF_KEY }}
+  OTX_KEY: {{ .Values.OTX_KEY }}
+  CIRCL_CREDENTIALS: {{ .Values.CIRCL_CREDENTIALS }}
+  VT_KEY: {{ .Values.VT_KEY }}
+  HA_KEY: {{ .Values.HA_KEY }}
+  INTEZER_KEY: {{ .Values.INTEZER_KEY }}
+  FIRST_MISP_API: {{ .Values.FIRST_MISP_API }}
+  MISP_KEY: {{ .Values.MISP_KEY }}
+  MAXMIND_KEY: {{ .Values.MAXMIND_KEY }}
+  DNSDB_KEY: {{ .Values.DNSDB_KEY }}
+  HONEYDB_API_ID: {{ .Values.HONEYDB_API_ID }}
+  HONEYDB_API_KEY: {{ .Values.HONEYDB_API_KEY }}
+  HUNTER_API_KEY: {{ .Values.HUNTER_API_KEY }}
+  CENSYS_API_ID: {{ .Values.CENSYS_API_ID }}
+  CENSYS_API_SECRET: {{ .Values.CENSYS_API_SECRET }}
+  ONYPHE_KEY: {{ .Values.ONYPHE_KEY }}
+  GREYNOISE_API_KEY: {{ .Values.GREYNOISE_API_KEY }}
+  TEST_JOB_ID: {{ .Values.TEST_JOB_ID }}
+  TEST_IP: {{ .Values.TEST_IP }}
+  TEST_DOMAIN: {{ .Values.TEST_DOMAIN }}
+  TEST_URL: {{ .Values.TEST_URL }}
+  TEST_MD5: {{ .Values.TEST_MD5 }}
+  CUCKOO_URL: {{ .Values.CUCKOO_URL }}
+  MISP_URL: {{ .Values.MISP_URL }}
+  FIRST_MISP_URL: {{ .Values.FIRST_MISP_URL }}
+  VT_NOTIFY_URL: {{ .Values.VT_NOTIFY_URL }}
+  DEBUG: {{ .Values.DEBUG }}
+  DISABLE_LOGGING_TEST: {{ .Values.DISABLE_LOGGING_TEST }}
+  MOCK_CONNECTIONS: {{ .Values.MOCK_CONNECTIONS }}
+  CELERY_BROKER_URL: {{ .Values.CELERY_BROKER_URL }}
+  DB_NAME: {{ .Values.DB_NAME }}
+  HTTPS_ENABLED: {{ .Values.HTTPS_ENABLED }}
+  AWS_SECRETS: {{ .Values.AWS_SECRETS }}
+  AWS_SQS: {{ .Values.AWS_SQS }}
+  AWS_REGION: {{ .Values.AWS_REGION }}

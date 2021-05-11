@@ -1,0 +1,233 @@
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-postgres-pv-volume
+  labels:
+    type: local
+    app: {{ .Release.Name }}
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/mnt/data"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-postgres-pv-claim
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-static-volume  #Volume to share nginx-static files between pods
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: static
+  capacity:
+    storage: 500Mi
+  local:
+    path: /tmp
+---
+kind: PersistentVolumeClaim #PVC to be claimed by the pods
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-static-claim
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: static
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Release.Name }}-rabbitmq
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-backend-rabbitmq
+          image: {{ .Values.RABBITMQ_IMAGE }}
+          ports:
+            - containerPort: 5672
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-postgres
+          image: {{ .Values.POSTGRES_IMAGE }}
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: {{ .Values.DB_PORT }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-postgres-config
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgredb
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: 500m
+            requests:
+              memory: 128Mi
+              cpu: 150m
+      volumes:
+        - name: postgredb
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-postgres-pv-claim
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-frontend-nginx
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.REPLICAS }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-frontend-nginx
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-frontend-nginx
+          image: {{ .Values.NGINX_DOCKER_IMAGE }}
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: nginx-logs
+              mountPath: /var/log/nginx
+            - name: static
+              mountPath: /var/www/static
+      volumes:
+        - name: nginx-logs
+          emptyDir: {}
+        - name: static
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-static-claim
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-deployment-backend
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.REPLICAS }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      volumes:
+        - name: shared-files
+          hostPath:
+            path: /tmp
+            type: Directory
+        - name: static
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-static-claim
+        - name: config
+          emptyDir: {}
+      containers:
+        - name: intel-owl-uwsgi
+          image: {{ .Values.INTELOWL_IMAGE }}
+          command: ["./entrypoint_uwsgi.sh"]
+          ports:
+          - containerPort: 8001
+          volumeMounts:
+            - name: config
+              mountPath: /opt/deploy/intel_owl/configuration
+            - name: shared-files
+              mountPath: /opt/deploy/files_required
+            - name: static
+              mountPath: /opt/deploy/intel_owl/static
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: 300m
+            requests:
+              memory: 256Mi
+              cpu: 250m          
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-configmap
+        - name: intel-owl-celery-beat
+          image: {{ .Values.CELERY_BEAT_IMAGE }}
+          volumeMounts:
+            - name: shared-files
+              mountPath: /opt/deploy/files_required
+            - name: config
+              mountPath: /opt/deploy/configuration
+          resources:
+            limits:
+              memory: 164Mi
+              cpu: 150m
+            requests:
+              memory: 128Mi
+              cpu: 100m
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-configmap
+        - name: intel-owl-celery-worker
+          image: {{ .Values.CELERY_WORKER_IMAGE }}
+          volumeMounts:
+            - name: shared-files
+              mountPath: /opt/deploy/files_required
+            - name: config
+              mountPath: /opt/deploy/configuration
+          resources:
+            limits:
+              memory: 1024Mi
+              cpu: 500m
+            requests:
+              memory: 256Mi
+              cpu: 150m
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-configmap
+
+ 
